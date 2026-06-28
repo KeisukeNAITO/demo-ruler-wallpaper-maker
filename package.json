@@ -1,0 +1,14 @@
+{
+  "name": "ruler-wallpaper-maker",
+  "version": "0.1.0",
+  "private": true,
+  "description": "目盛り付きの壁紙画像を生成するデスクトップアプリ",
+  "main": "src/main.js",
+  "scripts": {
+    "start": "electron .",
+    "test": "node --test"
+  },
+  "devDependencies": {
+    "electron": "^42.5.0"
+  }
+}
