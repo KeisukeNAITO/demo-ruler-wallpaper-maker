@@ -9,6 +9,9 @@ function createWindow() {
       preload: path.join(__dirname, 'preload.js'),
       contextIsolation: true,
       nodeIntegration: false,
+      // preload で src/core の純粋ロジックを require するため sandbox を無効化する。
+      // contextIsolation:true / nodeIntegration:false は維持し、公開 API は最小限に絞る。
+      sandbox: false,
     },
   });
 

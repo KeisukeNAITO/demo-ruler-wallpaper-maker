@@ -1,3 +1,5 @@
+const { assertPositive } = require('./assertPositive');
+
 /**
  * 0 を起点に等間隔の目盛り位置(px)を返す。
  * length ちょうどに当たる位置は含み、length を超える位置は含まない。
@@ -15,12 +17,6 @@ function calcTickPositions({ length, interval }) {
     positions.push(i * interval);
   }
   return positions;
-}
-
-function assertPositive(name, value) {
-  if (!(value > 0)) {
-    throw new Error(`${name} は正の数である必要があります: ${value}`);
-  }
 }
 
 module.exports = { calcTickPositions };
