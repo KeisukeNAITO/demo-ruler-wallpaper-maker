@@ -1,4 +1,5 @@
 const { calcTickPositions } = require('./tickPositions');
+const { assertPositive } = require('./assertPositive');
 
 /**
  * 縦目盛りを描くための線分を返す。
@@ -13,12 +14,6 @@ function calcVerticalTickLines({ width, height, interval }) {
 
   const xs = calcTickPositions({ length: width, interval });
   return xs.map((x) => ({ x, y1: 0, y2: height }));
-}
-
-function assertPositive(name, value) {
-  if (!(value > 0)) {
-    throw new Error(`${name} は正の数である必要があります: ${value}`);
-  }
 }
 
 module.exports = { calcVerticalTickLines };
