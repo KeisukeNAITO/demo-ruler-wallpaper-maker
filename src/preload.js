@@ -1,5 +1,7 @@
 const { contextBridge } = require('electron');
+const { calcVerticalTickLines } = require('./core/verticalTickLines');
 
-// レンダラへ公開する API はここに最小限で追加する。
-// 現時点で公開する API はない。
-contextBridge.exposeInMainWorld('rulerWallpaper', {});
+// レンダラへは最小限の純粋ロジックのみ公開する。
+contextBridge.exposeInMainWorld('rulerWallpaper', {
+  calcVerticalTickLines,
+});
