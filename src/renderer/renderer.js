@@ -4,21 +4,31 @@
 const canvas = document.getElementById('preview');
 const ctx = canvas.getContext('2d');
 
-const interval = 50; // px。将来は UI から指定できるようにする（#2 では固定）。
+const interval = 50; // px。将来は UI から指定できるようにする（#9）。
+const majorEvery = 5; // 何本ごとを主目盛りにするか。将来は指定可能にする。
 
-const lines = window.rulerWallpaper.calcVerticalTickLines({
-  width: canvas.width,
-  height: canvas.height,
+const ticks = window.rulerWallpaper.calcTicks({
+  length: canvas.width,
   interval,
+  majorEvery,
 });
 
-ctx.strokeStyle = '#333333';
-ctx.lineWidth = 1;
-for (const { x, y1, y2 } of lines) {
+ctx.font = '12px sans-serif';
+ctx.textBaseline = 'top';
+for (const { pos, major } of ticks) {
+  // 主目盛りは太く濃く、副目盛りは細く薄く描く。
+  ctx.strokeStyle = major ? '#333333' : '#bbbbbb';
+  ctx.lineWidth = major ? 2 : 1;
   ctx.beginPath();
-  ctx.moveTo(x, y1);
-  ctx.lineTo(x, y2);
+  ctx.moveTo(pos, 0);
+  ctx.lineTo(pos, canvas.height);
   ctx.stroke();
+
+  // 主目盛りには位置(px)を数値ラベルとして描く。
+  if (major) {
+    ctx.fillStyle = '#333333';
+    ctx.fillText(String(pos), pos + 2, 2);
+  }
 }
 
 // 「PNG で保存」: 表示中の canvas を PNG 化して main 側で保存する。
