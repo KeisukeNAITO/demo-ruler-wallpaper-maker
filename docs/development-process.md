@@ -50,6 +50,20 @@
 | PR マージ | **squash せず merge commit**。TDD の各コミットを履歴に残すのが目的。マージ後にブランチ削除。 |
 | CI | GitHub Actions が push / PR で `npm test` を実行し、緑であることを必ず確認できる。 |
 
+この 1 サイクルを図にすると次のとおり。CI が緑にならなければ TDD に戻る、というループが要点である。
+
+```mermaid
+flowchart LR
+  PO[PO が Issue を書く] --> pick[着手する Issue を選ぶ]
+  pick --> br["feature/&lt;n&gt;-slug を切る"]
+  br --> tdd[TDD で実装]
+  tdd --> pr[PR 作成・Closes #n]
+  pr --> ci{CI 緑?}
+  ci -- いいえ --> tdd
+  ci -- はい --> merge[merge commit・ブランチ削除]
+  merge --> closed[Issue 自動 CLOSE]
+```
+
 ---
 
 ## 4. ケーススタディ：1 つの PBI を最初から最後まで（#3 PNG 保存）
@@ -204,6 +218,17 @@ Sprint 2 では「**定規として読めて、両軸・間隔を調整できる
 3. **#9 目盛り間隔を UI で指定し、プレビューを更新できる**（PR #12, merge `fd373ae`） … `src/core/parseInterval.js` の `parseInterval(text) -> number` を TDD（`572be02` RED → `f1fb121` GREEN）。前後空白を許容し、空文字・非数値・全角数字・単位付き（"50px"）・0 以下・非有限を意味あるメッセージで弾く。`parseFloat` だと "50px" を 50 と解釈してしまうため `Number` で厳密変換するのがポイント。配線（`9da902e`）で間隔入力欄と専用エラー欄を足し、入力のたびに即時再描画する。
 
 Sprint 1 の「計算 → 描画 → 保存」に続き、Sprint 2 で「主 / 副の区別 → 両軸 → 間隔の可変化」が 1 本に繋がった。`calcTicks` が #7 で生まれ #8・#9 で使い回される様子は、**小さく作った純粋関数が次の PBI の土台になる**好例である。
+
+純粋関数の積み上がりを図にすると、この再利用と退役の流れが一目で分かる。
+
+```mermaid
+flowchart TD
+  ctp["calcTickPositions<br/>#1"] --> cvtl["calcVerticalTickLines<br/>#2"]
+  ctp --> ct["calcTicks<br/>#7"]
+  cvtl -. "#7 で統合・退役" .-> ct
+  ct -. "#8 が length=高さ で再利用" .-> h8["横方向の目盛り<br/>#8"]
+  pi["parseInterval<br/>#9"] -. "入力→間隔を渡す" .-> ct
+```
 
 ---
 
