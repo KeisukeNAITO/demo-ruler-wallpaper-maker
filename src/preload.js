@@ -1,7 +1,9 @@
-const { contextBridge } = require('electron');
+const { contextBridge, ipcRenderer } = require('electron');
 const { calcVerticalTickLines } = require('./core/verticalTickLines');
 
-// レンダラへは最小限の純粋ロジックのみ公開する。
+// レンダラへは最小限の純粋ロジックと保存 API のみ公開する。
 contextBridge.exposeInMainWorld('rulerWallpaper', {
   calcVerticalTickLines,
+  // PNG の dataURL を main に渡して保存する。結果(保存先/キャンセル/失敗)を返す。
+  savePng: (dataUrl) => ipcRenderer.invoke('save-png', dataUrl),
 });
