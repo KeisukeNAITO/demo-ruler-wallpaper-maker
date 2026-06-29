@@ -11,6 +11,20 @@
   <body>
     <h1>定規壁紙メーカー</h1>
     <p>
+      <label for="interval"
+        >目盛り間隔(px):
+        <input
+          id="interval"
+          type="number"
+          value="50"
+          min="1"
+          max="600"
+          step="any"
+        />
+      </label>
+      <span id="interval-error"></span>
+    </p>
+    <p>
       <button id="save" type="button">PNG で保存</button>
       <span id="status"></span>
     </p>
