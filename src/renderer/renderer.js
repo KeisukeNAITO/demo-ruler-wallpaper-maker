@@ -38,35 +38,75 @@ function drawAxisTicks(vertical, interval) {
   }
 }
 
-ctx.font = '12px sans-serif';
-ctx.textBaseline = 'top';
-
 // 指定間隔でプレビュー全体を描き直す。再描画なので必ず一旦クリアする。
+// canvas の解像度を変更すると ctx の状態(フォント等)はリセットされるため、
+// 文字描画の設定はここで毎回行う。
 function renderPreview(interval) {
+  ctx.font = '12px sans-serif';
+  ctx.textBaseline = 'top';
   ctx.clearRect(0, 0, canvas.width, canvas.height);
   drawAxisTicks(true, interval); // 縦方向の目盛り
   drawAxisTicks(false, interval); // 横方向の目盛り
 }
 
-// 間隔入力: 変更のたびにパース/検証し、正常なら即時再描画する。
-// 不正なら描画は変えず（直前の正常プレビューを保持）、専用欄にメッセージを出す。
+// 間隔入力をパースする。正常ならエラー欄を消して値を返し、不正なら
+// 専用エラー欄にメッセージを出して null を返す（描画は呼び出し側で抑止）。
 const intervalInput = document.getElementById('interval');
 const intervalError = document.getElementById('interval-error');
 
-function updatePreviewFromInput() {
-  let interval;
+function readInterval() {
   try {
-    interval = window.rulerWallpaper.parseInterval(intervalInput.value);
+    const interval = window.rulerWallpaper.parseInterval(intervalInput.value);
+    intervalError.textContent = '';
+    return interval;
   } catch (error) {
     intervalError.textContent = error.message;
-    return;
+    return null;
   }
-  intervalError.textContent = '';
-  renderPreview(interval);
 }
 
-intervalInput.addEventListener('input', updatePreviewFromInput);
-updatePreviewFromInput(); // 初期値(50px)で初回描画
+// 幅・高さ入力をパースして canvas の内部解像度に反映する。正常なら true、
+// 不正なら専用エラー欄にメッセージを出し、解像度は直前のまま false を返す。
+// 値が変わらないときは代入を避ける（canvas への width/height 代入は内容を
+// クリアしてしまうため、間隔だけ変えた際に直前プレビューを保つ）。
+const widthInput = document.getElementById('width');
+const heightInput = document.getElementById('height');
+const resolutionError = document.getElementById('resolution-error');
+
+function applyResolution() {
+  let width;
+  let height;
+  try {
+    width = window.rulerWallpaper.parseDimension('幅', widthInput.value);
+    height = window.rulerWallpaper.parseDimension('高さ', heightInput.value);
+  } catch (error) {
+    resolutionError.textContent = error.message;
+    return false;
+  }
+  resolutionError.textContent = '';
+  if (canvas.width !== width) {
+    canvas.width = width;
+  }
+  if (canvas.height !== height) {
+    canvas.height = height;
+  }
+  return true;
+}
+
+// 解像度と間隔の双方が正常なときだけプレビューを再描画する。
+// 不正な側は各専用エラー欄に表示し、描画は直前の状態を保つ（#9 案A を踏襲）。
+function updatePreview() {
+  const resolutionOk = applyResolution();
+  const interval = readInterval();
+  if (resolutionOk && interval !== null) {
+    renderPreview(interval);
+  }
+}
+
+intervalInput.addEventListener('input', updatePreview);
+widthInput.addEventListener('input', updatePreview);
+heightInput.addEventListener('input', updatePreview);
+updatePreview(); // 初期値(1000x600 / 50px)で初回描画
 
 // 「PNG で保存」: 表示中の canvas を PNG 化して main 側で保存する。
 // 保存・ダイアログは preload 経由の savePng に委ね、ここでは結果表示のみ行う。
