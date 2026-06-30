@@ -11,6 +11,17 @@
   <body>
     <h1>定規壁紙メーカー</h1>
     <p>
+      <label for="width"
+        >幅(px):
+        <input id="width" type="number" value="1000" min="1" step="1" />
+      </label>
+      <label for="height"
+        >高さ(px):
+        <input id="height" type="number" value="600" min="1" step="1" />
+      </label>
+      <span id="resolution-error"></span>
+    </p>
+    <p>
       <label for="interval"
         >目盛り間隔(px):
         <input
@@ -32,7 +43,7 @@
       id="preview"
       width="1000"
       height="600"
-      style="border: 1px solid #ccc"
+      style="border: 1px solid #ccc; max-width: 100%; height: auto"
     ></canvas>
     <script src="renderer.js"></script>
   </body>
