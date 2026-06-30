@@ -4,6 +4,8 @@ const { parseInterval } = require('./core/parseInterval');
 const { parseDimension } = require('./core/parseDimension');
 const { parsePositiveNumber } = require('./core/parsePositiveNumber');
 const { calcPpi } = require('./core/calcPpi');
+const { lengthToPx } = require('./core/lengthToPx');
+const { pxToLength } = require('./core/pxToLength');
 
 // レンダラへは最小限の純粋ロジックと保存 API のみ公開する。
 contextBridge.exposeInMainWorld('rulerWallpaper', {
@@ -16,6 +18,10 @@ contextBridge.exposeInMainWorld('rulerWallpaper', {
   parsePositiveNumber,
   // 画面の対角インチと解像度(幅/高さ px)から真の PPI を算出する。
   calcPpi,
+  // 間隔(選択単位 px/mm/cm)を PPI で px へ換算する。不正なら例外。
+  lengthToPx,
+  // px 位置を選択単位の物理長へ逆換算する(目盛りラベル用)。不正なら例外。
+  pxToLength,
   // PNG の dataURL を main に渡して保存する。結果(保存先/キャンセル/失敗)を返す。
   savePng: (dataUrl) => ipcRenderer.invoke('save-png', dataUrl),
 });
