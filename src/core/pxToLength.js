@@ -1,5 +1,4 @@
-const { assertPositive } = require('./assertPositive');
-const { MM_PER_INCH } = require('./lengthToPx');
+const { pxPerUnit } = require('./pxPerUnit');
 
 /**
  * px 位置を選択単位の物理長へ逆換算する(目盛りラベル用)。lengthToPx の逆。
@@ -14,19 +13,7 @@ function pxToLength({ px, unit, ppi }) {
   if (!(px >= 0)) {
     throw new Error(`px は 0 以上である必要があります: ${px}`);
   }
-
-  if (unit === 'px') {
-    return px;
-  }
-  if (unit === 'mm') {
-    assertPositive('PPI', ppi);
-    return (px * MM_PER_INCH) / ppi;
-  }
-  if (unit === 'cm') {
-    assertPositive('PPI', ppi);
-    return (px * MM_PER_INCH) / (ppi * 10);
-  }
-  throw new Error(`未知の単位です: ${unit}`);
+  return px / pxPerUnit(unit, ppi);
 }
 
 module.exports = { pxToLength };

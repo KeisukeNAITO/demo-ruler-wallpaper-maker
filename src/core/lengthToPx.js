@@ -1,7 +1,5 @@
 const { assertPositive } = require('./assertPositive');
-
-/** 1 インチ = 25.4 ミリメートル。 */
-const MM_PER_INCH = 25.4;
+const { pxPerUnit } = require('./pxPerUnit');
 
 /**
  * 間隔(選択単位)を描画用の px 長へ換算する。px はそのまま、mm は ppi で換算、
@@ -13,19 +11,7 @@ const MM_PER_INCH = 25.4;
  */
 function lengthToPx({ value, unit, ppi }) {
   assertPositive('間隔', value);
-
-  if (unit === 'px') {
-    return value;
-  }
-  if (unit === 'mm') {
-    assertPositive('PPI', ppi);
-    return (value * ppi) / MM_PER_INCH;
-  }
-  if (unit === 'cm') {
-    assertPositive('PPI', ppi);
-    return (value * 10 * ppi) / MM_PER_INCH;
-  }
-  throw new Error(`未知の単位です: ${unit}`);
+  return value * pxPerUnit(unit, ppi);
 }
 
-module.exports = { lengthToPx, MM_PER_INCH };
+module.exports = { lengthToPx };
