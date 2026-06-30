@@ -6,9 +6,21 @@ const ctx = canvas.getContext('2d');
 
 const majorEvery = 5; // 何本ごとを主目盛りにするか。当面 5 固定（UI 化は #9 対象外）。
 
+// 真の PPI を保持する。updatePpi 成功時に値を入れ、不正/未確定なら null。
+// mm/cm の換算に使う（px 単位では不要）。
+let currentPpi = null;
+
+// 主目盛りのラベル文字列を作る。選択単位の物理位置に換算して表示する。
+// px はそのままの数値、mm/cm は小数 1 桁＋単位を付ける。
+function formatTickLabel(pos, unit) {
+  const length = window.rulerWallpaper.pxToLength({ px: pos, unit, ppi: currentPpi });
+  return unit === 'px' ? String(length) : `${length.toFixed(1)}${unit}`;
+}
+
 // 指定軸の目盛りを描く。縦横で計算は同じ calcTicks を使い、
 // vertical=true なら length=幅で縦線(上端にラベル)、false なら length=高さで横線(左端にラベル)。
-function drawAxisTicks(vertical, interval) {
+// interval は px 換算済みの間隔、unit はラベル表示用の単位。
+function drawAxisTicks(vertical, interval, unit) {
   const length = vertical ? canvas.width : canvas.height;
   const ticks = window.rulerWallpaper.calcTicks({ length, interval, majorEvery });
 
@@ -26,43 +38,54 @@ function drawAxisTicks(vertical, interval) {
     }
     ctx.stroke();
 
-    // 主目盛りには位置(px)を数値ラベルとして描く。
+    // 主目盛りには選択単位での位置を数値ラベルとして描く。
     if (major) {
       ctx.fillStyle = '#333333';
+      const label = formatTickLabel(pos, unit);
       if (vertical) {
-        ctx.fillText(String(pos), pos + 2, 2);
+        ctx.fillText(label, pos + 2, 2);
       } else {
-        ctx.fillText(String(pos), 2, pos + 2);
+        ctx.fillText(label, 2, pos + 2);
       }
     }
   }
 }
 
-// 指定間隔でプレビュー全体を描き直す。再描画なので必ず一旦クリアする。
+// 指定間隔(px)でプレビュー全体を描き直す。再描画なので必ず一旦クリアする。
 // canvas の解像度を変更すると ctx の状態(フォント等)はリセットされるため、
-// 文字描画の設定はここで毎回行う。
-function renderPreview(interval) {
+// 文字描画の設定はここで毎回行う。unit はラベル表示用。
+function renderPreview(interval, unit) {
   ctx.font = '12px sans-serif';
   ctx.textBaseline = 'top';
   ctx.clearRect(0, 0, canvas.width, canvas.height);
-  drawAxisTicks(true, interval); // 縦方向の目盛り
-  drawAxisTicks(false, interval); // 横方向の目盛り
+  drawAxisTicks(true, interval, unit); // 縦方向の目盛り
+  drawAxisTicks(false, interval, unit); // 横方向の目盛り
 }
 
-// 間隔入力をパースする。正常ならエラー欄を消して値を返し、不正なら
-// 専用エラー欄にメッセージを出して null を返す（描画は呼び出し側で抑止）。
+// 間隔入力をパースし、選択単位から px へ換算して返す。正常ならエラー欄を消して
+// px 値を返し、不正なら専用エラー欄にメッセージを出して null を返す（描画は
+// 呼び出し側で抑止）。mm/cm を選んでいて PPI が未確定/不正(currentPpi が null)の
+// ときは、対角サイズの入力を促すメッセージを出す（#9 案A=直前プレビュー保持）。
 const intervalInput = document.getElementById('interval');
 const intervalError = document.getElementById('interval-error');
+const unitSelect = document.getElementById('unit');
 
-function readInterval() {
+function readIntervalPx() {
+  const unit = unitSelect.value;
+  let value;
   try {
-    const interval = window.rulerWallpaper.parseInterval(intervalInput.value);
-    intervalError.textContent = '';
-    return interval;
+    value = window.rulerWallpaper.parseInterval(intervalInput.value);
   } catch (error) {
     intervalError.textContent = error.message;
     return null;
   }
+  if ((unit === 'mm' || unit === 'cm') && currentPpi === null) {
+    intervalError.textContent =
+      'mm/cm で指定するには先に画面の対角サイズ(インチ)を入力してください';
+    return null;
+  }
+  intervalError.textContent = '';
+  return window.rulerWallpaper.lengthToPx({ value, unit, ppi: currentPpi });
 }
 
 // 幅・高さ入力をパースして canvas の内部解像度に反映する。正常なら true、
@@ -93,18 +116,23 @@ function applyResolution() {
   return true;
 }
 
-// 解像度と間隔の双方が正常なときだけプレビューを再描画する。
-// 不正な側は各専用エラー欄に表示し、描画は直前の状態を保つ（#9 案A を踏襲）。
-function updatePreview() {
+// 入力全体から依存順にプレビューを更新する。
+// applyResolution(canvas 確定) → updatePpi(canvas 反映後に PPI) →
+// readIntervalPx(間隔を px 換算) → renderPreview(px 間隔) の順に揃える。
+// 解像度・間隔いずれかが不正なら、その側は専用エラー欄に表示し描画は直前の状態を
+// 保つ（#9 案A を踏襲）。PPI は mm/cm 換算に使うため間隔換算より先に更新する。
+function render() {
   const resolutionOk = applyResolution();
-  const interval = readInterval();
-  if (resolutionOk && interval !== null) {
-    renderPreview(interval);
+  updatePpi(); // currentPpi を確定（解像度反映後の canvas を使う）
+  const intervalPx = readIntervalPx();
+  if (resolutionOk && intervalPx !== null) {
+    renderPreview(intervalPx, unitSelect.value);
   }
 }
 
 // 画面の対角サイズ(インチ)と現在の出力解像度から真の PPI を算出して表示する。
-// PPI はこの PBI では表示のみ（目盛り間隔の単位 mm/cm への利用は次 PBI）。
+// 表示に加え currentPpi を更新し、mm/cm の間隔換算に使う。不正/未確定なら
+// 表示は直前のまま保ちつつ currentPpi は null にする（mm/cm 換算を抑止）。
 const diagonalInchInput = document.getElementById('diagonal-inch');
 const ppiOutput = document.getElementById('ppi');
 const ppiError = document.getElementById('ppi-error');
@@ -118,7 +146,8 @@ function updatePpi() {
     );
   } catch (error) {
     ppiError.textContent = error.message;
-    return; // 不正値では PPI 表示を更新せず直前のまま保つ
+    currentPpi = null; // 不正値では mm/cm 換算を成立させない
+    return; // PPI 表示自体は更新せず直前のまま保つ
   }
   ppiError.textContent = '';
   const ppi = window.rulerWallpaper.calcPpi({
@@ -126,22 +155,18 @@ function updatePpi() {
     heightPx: canvas.height,
     diagonalInch,
   });
+  currentPpi = ppi;
   ppiOutput.textContent = `PPI: ${ppi.toFixed(1)}`;
 }
 
-intervalInput.addEventListener('input', updatePreview);
-widthInput.addEventListener('input', () => {
-  updatePreview();
-  updatePpi(); // 解像度が変わると PPI も追従する
-});
-heightInput.addEventListener('input', () => {
-  updatePreview();
-  updatePpi();
-});
-diagonalInchInput.addEventListener('input', updatePpi);
+// すべての入力変更で依存順にまとめて再描画する（render が PPI 更新も内包する）。
+intervalInput.addEventListener('input', render);
+unitSelect.addEventListener('change', render);
+widthInput.addEventListener('input', render);
+heightInput.addEventListener('input', render);
+diagonalInchInput.addEventListener('input', render);
 
-updatePreview(); // 初期値(1000x600 / 50px)で初回描画
-updatePpi(); // 初期値(対角サイズ)で PPI を初回表示
+render(); // 初期値(1000x600 / 50px / 単位 px)で初回描画と PPI 表示
 
 // 「PNG で保存」: 表示中の canvas を PNG 化して main 側で保存する。
 // 保存・ダイアログは preload 経由の savePng に委ね、ここでは結果表示のみ行う。
