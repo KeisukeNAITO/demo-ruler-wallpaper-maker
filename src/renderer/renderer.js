@@ -103,10 +103,45 @@ function updatePreview() {
   }
 }
 
+// 画面の対角サイズ(インチ)と現在の出力解像度から真の PPI を算出して表示する。
+// PPI はこの PBI では表示のみ（目盛り間隔の単位 mm/cm への利用は次 PBI）。
+const diagonalInchInput = document.getElementById('diagonal-inch');
+const ppiOutput = document.getElementById('ppi');
+const ppiError = document.getElementById('ppi-error');
+
+function updatePpi() {
+  let diagonalInch;
+  try {
+    diagonalInch = window.rulerWallpaper.parsePositiveNumber(
+      '対角サイズ',
+      diagonalInchInput.value,
+    );
+  } catch (error) {
+    ppiError.textContent = error.message;
+    return; // 不正値では PPI 表示を更新せず直前のまま保つ
+  }
+  ppiError.textContent = '';
+  const ppi = window.rulerWallpaper.calcPpi({
+    widthPx: canvas.width,
+    heightPx: canvas.height,
+    diagonalInch,
+  });
+  ppiOutput.textContent = `PPI: ${ppi.toFixed(1)}`;
+}
+
 intervalInput.addEventListener('input', updatePreview);
-widthInput.addEventListener('input', updatePreview);
-heightInput.addEventListener('input', updatePreview);
+widthInput.addEventListener('input', () => {
+  updatePreview();
+  updatePpi(); // 解像度が変わると PPI も追従する
+});
+heightInput.addEventListener('input', () => {
+  updatePreview();
+  updatePpi();
+});
+diagonalInchInput.addEventListener('input', updatePpi);
+
 updatePreview(); // 初期値(1000x600 / 50px)で初回描画
+updatePpi(); // 初期値(対角サイズ)で PPI を初回表示
 
 // 「PNG で保存」: 表示中の canvas を PNG 化して main 側で保存する。
 // 保存・ダイアログは preload 経由の savePng に委ね、ここでは結果表示のみ行う。
