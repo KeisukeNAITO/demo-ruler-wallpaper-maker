@@ -1,4 +1,5 @@
 const { assertPositive } = require('./assertPositive');
+const { parseFiniteNumber } = require('./parseFiniteNumber');
 
 /**
  * 入力文字列を目盛り間隔(px)の正の有限数へパース・検証する。
@@ -10,22 +11,7 @@ const { assertPositive } = require('./assertPositive');
  * @returns {number} 正の有限数の間隔(px)
  */
 function parseInterval(text) {
-  if (typeof text !== 'string') {
-    throw new Error(`間隔は文字列で指定してください: ${text}`);
-  }
-
-  const trimmed = text.trim();
-  if (trimmed === '') {
-    throw new Error('間隔を入力してください');
-  }
-
-  // 全角数字や単位付き("50px")を弾くため Number で厳密に変換する。
-  // parseFloat は "50px" を 50 と解釈してしまうため使わない。
-  const value = Number(trimmed);
-  if (!Number.isFinite(value)) {
-    throw new Error(`間隔は数値で指定してください: ${text}`);
-  }
-
+  const value = parseFiniteNumber('間隔', text);
   assertPositive('間隔', value);
   return value;
 }
